@@ -8,6 +8,8 @@ public class Projectile : MonoBehaviour
     public bool isMoving = false;
     public float speed = 0f;
     public float movementAngle = 0f;
+    public ProjectileType projectileType = ProjectileType.def;
+    
 
     public void Update(){
         if(isMoving){
@@ -17,6 +19,7 @@ public class Projectile : MonoBehaviour
     }
     public void ConstructProjectile(float speed, float movementAngle){
         this.speed = speed;
+        transform.rotation = Quaternion.identity;
         transform.Rotate(new Vector3(0f,0f,movementAngle), Space.World);
         StartMoving();
     }
@@ -31,12 +34,14 @@ public class Projectile : MonoBehaviour
 
     private void CheckIfOutOfBounds(){
         if(!HelperFunctions.IsOnScreen(transform.position)){
-            DestroySelf();
+            isMoving = false;
+            ProjectilePool.instance.DeactivateProjectile(this);
         }
     }
+}
 
-    private void DestroySelf(){
-        Destroy(gameObject);
-    }
+public enum ProjectileSprite {
+    Directed, 
+    NonDirected
 }
 

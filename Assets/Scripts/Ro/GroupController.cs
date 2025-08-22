@@ -8,32 +8,28 @@ public class GroupController : MonoBehaviour{
 
     private Group[] groups;
     private float[] spawnedThisSecond;
-    private float spawnTiming;
-    public float timer; 
+    public float timer;
     private bool startSpawning = false;
+    public int decimalPlaces = 2;
+    
+
     void Update(){
-
+    
         if(startSpawning){
-            timer  += Time.deltaTime;
-            for(int i = 0 ; i < groups.Length ; i++){
-                // Floors timer so that modulo actually works with the time given 
-                // And then checks to see if the wave has spawned already since time.deltatime only increases the timer with
-                // fractions of a second, necessatiting a check. 
-
-                float timePastDelay = timer - groups[i].delay;
-                float timePastDelayInt = Mathf.Floor(timePastDelay);
-                bool isTimeToGenerate = false;
-                if(spawnedThisSecond[i] == timePastDelayInt){
-                    continue;
-                } else {
-                    isTimeToGenerate =  timePastDelayInt % groups[i].spawnInterval == 0;
-                }
-
-                if(isTimeToGenerate){ 
-                    spawnedThisSecond[i] = timePastDelayInt;
+           timer += Time.deltaTime; 
+           for (int i = 0 ; i < groups.Length ; i++){
+                float truncTime = HelperFunctions.RoundToDecimal(timer, decimalPlaces); // be able to divide to spawn 
+                if(truncTime != spawnedThisSecond[i]){ // statement used so that spawning doesn't happen multiple times per parts of a second
+                bool isDivisible = ((truncTime - groups[i].delay) % groups[i].spawnInterval) == 0;
+                if(Mathf.Approximately(truncTime, groups[i].delay)){
                     StartSpawning(groups[i]);
+                    spawnedThisSecond[i] = truncTime;
+                } else if (isDivisible){
+                    StartSpawning(groups[i]);
+                    spawnedThisSecond[i] = truncTime;
                 }
-            }
+                }
+           }
         }
     }
 
@@ -66,7 +62,17 @@ public class GroupController : MonoBehaviour{
             float yPos = Mathf.Sin(positionAngle);
             Vector2 projectilePosition = new Vector2((xPos * ring.radius) + transform.position.x + ring.offset.x, 
                                 (yPos * ring.radius) + transform.position.y + ring.offset.y);
-            GameObject projectile = Instantiate(ring.projectile, projectilePosition, Quaternion.identity, transform );
+            GameObject projectile;
+            if(ring.movementAngle == MovementAngle.Fixed){
+                projectile = ProjectilePool.instance.ActivateProjectile(ProjectileType.undirected);
+            } else if (ring.movementAngle == MovementAngle.TowardsPlayer){
+                projectile = ProjectilePool.instance.ActivateProjectile(ProjectileType.directed);
+            } else {
+                Debug.LogError("How did you get here?");
+                projectile = ProjectilePool.instance.ActivateProjectile(ProjectileType.def);
+            }
+
+            projectile.transform.position = projectilePosition;
             Projectile proj = projectile.GetComponent<Projectile>();
             float movementAngle = HelperFunctions.CaluclateProjectileMovementAngle(i, ring, projectilePosition);
             proj.ConstructProjectile(ring.speed, movementAngle);
@@ -80,7 +86,17 @@ public class GroupController : MonoBehaviour{
             float yPos = Mathf.Sin(positionAngle);
             Vector2 projectilePosition = new Vector2((xPos * stack.radius) + transform.position.x + stack.offset.x, 
                 (yPos * stack.radius) + transform.position.y + stack.offset.y);
-            GameObject projectile = Instantiate(stack.projectile, projectilePosition, Quaternion.identity, transform);
+
+            GameObject projectile;
+            if(stack.movementAngle == MovementAngle.Fixed){
+                projectile = ProjectilePool.instance.ActivateProjectile(ProjectileType.undirected);
+            } else if (stack.movementAngle == MovementAngle.TowardsPlayer){
+                projectile = ProjectilePool.instance.ActivateProjectile(ProjectileType.directed);
+            } else {
+                Debug.LogError("How did you get here?");
+                projectile = ProjectilePool.instance.ActivateProjectile(ProjectileType.def);
+            }
+            projectile.transform.position = projectilePosition;
             Projectile proj = projectile.GetComponent<Projectile>();
             float angle = HelperFunctions.CaluclateProjectileMovementAngle(i, stack, projectilePosition);
             proj.ConstructProjectile(stack.speed + (stack.speed * stack.speedMultiplier * (i+1)), angle);
